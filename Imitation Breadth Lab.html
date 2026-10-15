@@ -1,0 +1,503 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Imitation Breadth Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: lab-notebook page, sibling of the Parallel Problem Solving Lab. Experiment bar across the top, controls column beside a results column (breadth sweep, horizon table, exploration bars), then a step-through of one run. One column on phones, results first. */
+:root{
+  --bg:#F1F3F2; --surface:#FFFFFF; --ink:#17201E; --muted:#56635F; --line:#D4DCD9; --soft:#E3EEEA;
+  --accent:#126356;
+  --h1:#D9812B; --h2:#A83F86; --h3:#2B68B0; --h4:#1C2A3D;
+  --f1:#2563C9; --f2:#D9772B; --f3:#1F9A86; --f4:#B8408C; --f5:#6E7F1A; --f6:#7A4FD0; --f7:#C23B3B; --f8:#4F6475;
+  --bar:#7FA79D; --good:#126356; --bad:#B03A2E;
+  --f-display:"Newsreader", Georgia, "Times New Roman", serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1514; --surface:#17201F; --ink:#E4ECE9; --muted:#97A7A2; --line:#2A3735; --soft:#1C2E2A;
+  --accent:#6CCBB5;
+  --h1:#F2A65A; --h2:#E07BBE; --h3:#7FB0F0; --h4:#E4ECE9;
+  --f1:#6EA1FF; --f2:#F2A15E; --f3:#4CC9B0; --f4:#E07BBE; --f5:#B5C451; --f6:#AE8EF5; --f7:#F07C7C; --f8:#A9BAC7;
+  --bar:#4F8A7D; --good:#6CCBB5; --bad:#F08A7E; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1514; --surface:#17201F; --ink:#E4ECE9; --muted:#97A7A2; --line:#2A3735; --soft:#1C2E2A;
+  --accent:#6CCBB5;
+  --h1:#F2A65A; --h2:#E07BBE; --h3:#7FB0F0; --h4:#E4ECE9;
+  --f1:#6EA1FF; --f2:#F2A15E; --f3:#4CC9B0; --f4:#E07BBE; --f5:#B5C451; --f6:#AE8EF5; --f7:#F07C7C; --f8:#A9BAC7;
+  --bar:#4F8A7D; --good:#6CCBB5; --bad:#F08A7E; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1260px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{padding-block:28px 18px}
+.cite{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.02em}
+h1{font-family:var(--f-display);font-weight:600;font-size:clamp(30px,4.4vw,44px);line-height:1.08;margin:6px 0 10px;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:600;font-size:22px;margin:0 0 10px;text-wrap:balance}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;font-weight:600}
+.lede{max-width:70ch;margin:0}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 12px}
+.chip{font:500 13px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer}
+.chip small{font-family:var(--f-mono);color:var(--muted);margin-left:6px;font-size:11px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.chip[aria-pressed="true"] small{color:var(--surface);opacity:.85}
+.note{background:var(--soft);border-radius:8px;padding:12px 14px;margin-bottom:20px}
+.note p{margin:0;max-width:95ch}
+.main{display:grid;grid-template-columns:minmax(270px,320px) minmax(0,1fr);gap:20px;align-items:start;padding-bottom:20px}
+@media (max-width:880px){.main{grid-template-columns:minmax(0,1fr)} .controls{order:2}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.controls{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field+.field{margin-top:12px}
+.field label{font-size:13px;font-weight:500}
+.hint{font-size:12px;color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+select{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.val{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{flex:1;font:500 12.5px var(--f-body);padding:7px 6px;border:0;background:transparent;color:var(--ink);cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.btn{font:600 14px var(--f-body);padding:9px 14px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.results{display:flex;flex-direction:column;gap:16px;min-width:0}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.status{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.progress>div{height:100%;width:0;background:var(--accent)}
+canvas{display:block;width:100%;touch-action:none}
+#cSweep{height:290px;cursor:pointer}
+.bars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+@media (max-width:640px){.bars{grid-template-columns:minmax(0,1fr)}}
+.bars canvas{height:170px;cursor:pointer}
+.bars p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);align-items:center}
+.legend label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+.tablewrap{overflow-x:auto;margin-top:6px}
+table{border-collapse:collapse;font-size:12.5px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-family:var(--f-body);font-size:11px;letter-spacing:.05em;color:var(--muted);font-weight:600}
+th.rowh{text-align:left}
+td.best{background:var(--soft);color:var(--accent);font-weight:600}
+td.sel,th.sel{outline:1.5px solid var(--ink);outline-offset:-2px}
+.watch-top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px}
+.watch-top .grow{flex:1;min-width:160px}
+.firms{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.firm{display:grid;grid-template-columns:64px auto minmax(60px,1fr);gap:10px;align-items:center;min-width:0}
+.firm .nm{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;flex:none;display:inline-block}
+.bits{display:flex;gap:3px}
+.bit{width:17px;height:17px;border:1.5px solid var(--ink);border-radius:3px;position:relative}
+.bit.on{background:var(--ink)}
+.bit.cp{box-shadow:0 0 0 2.5px var(--accent)}
+.bit.sh::after{content:"";position:absolute;left:50%;bottom:-6px;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--muted)}
+@media (max-width:460px){.bit{width:13px;height:13px}.bits{gap:2px}.firm{grid-template-columns:52px auto minmax(40px,1fr)}}
+.act{font-size:12px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.act b{color:var(--ink);font-weight:600;font-family:var(--f-mono)}
+.pbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:3px}
+.pbar>div{height:100%;background:var(--accent)}
+#cWatch{height:180px;cursor:crosshair;margin-top:4px}
+.how{padding-block:10px 40px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:12px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.step .k{font-family:var(--f-mono);font-size:12px;color:var(--accent)}
+.step p{margin:6px 0 0;font-size:14px}
+.hyp{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px}
+.hyp .step b{font-weight:600}
+.fine{font-size:13px;color:var(--muted);max-width:92ch;margin-top:16px}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="cite">Csaszar &amp; Siggelkow (2010) · “How Much to Copy? Determinants of Effective Imitation Breadth” · Organization Science 21(3): 661–676</div>
+  <h1>Imitation Breadth Lab</h1>
+  <p class="lede">Five firms each choose 12 interdependent practices. They improve by testing one-practice changes, and when that stops working they copy β practices from whichever firm is currently doing best. How many practices should they copy? The paper’s answer depends on how tightly practices interact (K), how similar the firms’ contexts are (S), and how long the firm has to wait for results (T). Each experiment below sweeps β across its full range and reports performance at four horizons.</p>
+</header>
+
+<div class="presets" id="presets" role="group" aria-label="Experiments"></div>
+<div class="note" id="note"></div>
+
+<div class="main">
+  <aside class="controls">
+    <div class="panel">
+      <h3>Practices and context</h3>
+      <div class="field">
+        <label for="inK">K, interactions per practice <span class="val" id="kVal"></span></label>
+        <input type="range" id="inK" min="0" max="11" step="1">
+        <span class="hint" id="kHint"></span>
+      </div>
+      <div class="field">
+        <label for="inS">S, context similarity <span class="val" id="sVal"></span></label>
+        <input type="range" id="inS" min="0" max="12" step="1">
+        <span class="hint" id="sHint"></span>
+      </div>
+      <div class="field">
+        <label for="inM">Firms in the industry</label>
+        <select id="inM"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>8</option></select>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>When stuck, a firm…</h3>
+      <div class="seg" id="mode" role="group" aria-label="Search after getting stuck">
+        <button data-m="disc">Copies shared</button><button data-m="nondisc">Copies any</button><button data-m="jump">Jumps randomly</button>
+      </div>
+      <p class="hint" id="modeHint" style="margin:8px 0 0"></p>
+    </div>
+    <div class="panel">
+      <h3>Precision</h3>
+      <div class="field">
+        <label for="inR">Simulation runs per point</label>
+        <select id="inR"><option value="100">100 runs (fast)</option><option value="250" selected>250 runs</option><option value="500">500 runs</option><option value="1000">1,000 runs (as in the paper)</option></select>
+        <span class="hint">Every β value uses the same landscapes and starting positions, so differences between points come from breadth alone.</span>
+      </div>
+      <div style="margin-top:12px"><button class="btn ghost" id="rerun">Draw new landscapes</button></div>
+    </div>
+  </aside>
+
+  <section class="results">
+    <div class="panel">
+      <div class="head"><h3 style="margin:0">Average performance by imitation breadth</h3><span class="status" id="status"></span></div>
+      <div class="progress" id="prog"><div></div></div>
+      <div class="legend" id="hzLegend"></div>
+      <canvas id="cSweep" aria-label="Performance against imitation breadth, one line per time horizon"></canvas>
+      <div class="tablewrap"><table id="tbl"></table></div>
+      <p class="hint" style="margin:8px 0 0">Shaded cells mark the best breadth at each horizon. Click the chart or a column to follow that β in the step-through below.</p>
+      <div class="bars">
+        <div><h3>Distinct configurations visited by T = 1,000</h3><canvas id="cVis" aria-label="Distinct configurations visited by imitation breadth"></canvas><p>Average per firm. The paper reads this as how much exploration a breadth produces (Figures 4 and 9).</p></div>
+        <div><h3>First imitations that lowered performance</h3><canvas id="cDec" aria-label="Share of first imitations that ended up lowering performance"></canvas><p>Performance just before the second imitation compared with just before the first, so it includes the local fixes in between (Figure 3).</p></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 style="font-size:20px;margin-bottom:4px">Step through one run</h2>
+      <p class="hint" style="margin:0 0 12px">Same settings, one draw of landscapes. Filled squares are practices set to 1. A dot under a square marks a practice whose payoff is shared across firms; a green ring marks a practice changed by copying or jumping in this period.</p>
+      <div class="watch-top">
+        <div class="field grow" style="margin:0"><label for="wBeta">β for this run <span class="val" id="wBetaVal"></span></label><input type="range" id="wBeta" min="0" max="12" step="1"></div>
+        <div class="field" style="margin:0;width:110px"><label for="wT">Periods</label><select id="wT"><option>20</option><option selected>40</option><option>100</option></select></div>
+        <button class="btn ghost" id="wNew" style="align-self:flex-end">New run</button>
+      </div>
+      <canvas id="cWatch" aria-label="Each firm's performance over time in this run"></canvas>
+      <div class="watch-top" style="margin:10px 0 0">
+        <button class="btn" id="play">Play</button>
+        <span class="val" id="tLabel" style="min-width:8ch;font-size:14px">Period 0</span>
+        <input type="range" id="scrub" class="grow" min="0" max="40" value="0" aria-label="Period" style="flex:1;min-width:150px">
+      </div>
+      <div class="firms" id="firms"></div>
+    </div>
+  </section>
+</div>
+
+<section class="how">
+  <h2>How the model works</h2>
+  <div class="steps">
+    <div class="step"><div class="k">Firms and landscapes</div><p>Each firm sets N = 12 binary practices. A practice’s payoff depends on its own setting and on K other practices. Firm performance is the average payoff, rescaled so 0 is the worst and 1 the best configuration on that firm’s own landscape.</p></div>
+    <div class="step"><div class="k">Context similarity</div><p>S of the 12 payoff functions are shared by every firm; the other 12 − S are drawn separately for each. With S = 12 all firms face the same landscape. With S = 4 a practice that works for the leader may do nothing for you.</p></div>
+    <div class="step"><div class="k">Local search</div><p>Each period a firm tests every one-practice change and adopts the best one if it beats the status quo. When none does, the firm is stuck.</p></div>
+    <div class="step"><div class="k">Imitation</div><p>In the period after getting stuck, the firm copies β randomly chosen practices from the current best performer, then resumes local search. <b>Discriminant</b> copying draws only from the S shared practices. <b>Nondiscriminant</b> copying draws from all 12, because the firm can’t tell which ones transfer.</p></div>
+  </div>
+
+  <h2 style="margin-top:28px">Three hypotheses to test in class</h2>
+  <div class="hyp">
+    <div class="step"><div class="k">Hypothesis 1 · similar contexts</div><p>Copying more is generally better, except that with high K and a <b>short</b> horizon, moving from very low to intermediate breadth hurts, and with high K and a <b>long</b> horizon, very high breadth hurts. Try the second experiment.</p></div>
+    <div class="step"><div class="k">Hypothesis 2 · different contexts</div><p>Copying more is generally harmful, except that nondiscriminant copying of a few practices helps in the long run, and helps from very low levels in the short run under high K, though still below pure local search. Compare the third and fourth experiments.</p></div>
+    <div class="step"><div class="k">Hypothesis 3 · firm similarity</div><p>Over short horizons, intermediate-sized imitation hurts most when the copied firm is very different. This lab doesn’t chart firm similarity directly; the step-through shows how many practices differ before each copy.</p></div>
+  </div>
+  <p class="fine"><b>Modeling choices not fixed by the paper.</b> All firms share the same interaction pattern (which practices affect which); only the payoff tables differ outside the S shared ones. Copying “β practices” means picking β practice positions at random and taking the leader’s setting for each, so a pick that already matches changes nothing. The best performer, if stuck, “copies” itself, which changes nothing. All firms move simultaneously from the previous period’s positions. The paper averages 1,000 runs; at 250 runs the curves are a little noisier but show the same shapes.</p>
+</section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const HZ=[4,10,100,1000];
+
+/* ---------- RNG ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------- Landscapes with S shared payoff functions ---------- */
+function makeWorld(N,K,S,M,seed){
+  const r=mulberry32(seed),D=K+1,TS=1<<D;
+  const deps=new Int32Array(N*D);
+  for(let i=0;i<N;i++){const o=[];for(let j=0;j<N;j++) if(j!==i) o.push(j);
+    for(let j=o.length-1;j>0;j--){const k=Math.floor(r()*(j+1));const t=o[j];o[j]=o[k];o[k]=t}
+    deps[i*D]=i;for(let d=1;d<D;d++) deps[i*D+d]=o[d-1]}
+  // which practice positions carry each bit, for incremental table building
+  const affI=[],affD=[];for(let b=0;b<N;b++){affI.push([]);affD.push([])}
+  for(let i=0;i<N;i++) for(let d=0;d<D;d++){affI[deps[i*D+d]].push(i);affD[deps[i*D+d]].push(d)}
+  const ord=[...Array(N).keys()];for(let j=N-1;j>0;j--){const k=Math.floor(r()*(j+1));const t=ord[j];ord[j]=ord[k];ord[k]=t}
+  const shared=new Uint8Array(N);const sharedIdx=Int32Array.from(ord.slice(0,S).sort((a,b)=>a-b));for(const i of sharedIdx) shared[i]=1;
+  const sharedTab=new Float64Array(N*TS);for(let i=0;i<N*TS;i++) sharedTab[i]=r();
+  const P=[];
+  for(let f=0;f<M;f++){
+    const tab=new Float64Array(N*TS);
+    for(let i=0;i<N;i++) for(let t=0;t<TS;t++) tab[i*TS+t]=shared[i]?sharedTab[i*TS+t]:r();
+    P.push(buildTable(N,TS,tab,affI,affD));
+  }
+  return {N,K,S,M,shared,sharedIdx,P};
+}
+function buildTable(N,TS,tab,affI,affD){
+  const size=1<<N,out=new Float64Array(size),idx=new Int32Array(N);let s=0;
+  for(let i=0;i<N;i++) s+=tab[i*TS];out[0]=s;let x=0;
+  for(let k=1;k<size;k++){const b=31-Math.clz32(k&-k);x^=1<<b;const I=affI[b],Dd=affD[b];
+    for(let m=0;m<I.length;m++){const i=I[m],o=tab[i*TS+idx[i]];idx[i]^=1<<Dd[m];s+=tab[i*TS+idx[i]]-o}
+    out[x]=s}
+  let mn=Infinity,mx=-Infinity;for(let k=0;k<size;k++){if(out[k]<mn)mn=out[k];if(out[k]>mx)mx=out[k]}
+  const sc=new Float32Array(size),rg=mx-mn||1;for(let k=0;k<size;k++) sc[k]=(out[k]-mn)/rg;return sc;
+}
+
+/* ---------- Search ---------- */
+const MODES={disc:0,nondisc:1,jump:2};
+let MARKS=[],STAMP=0;
+function ensureMarks(M,size){if(MARKS.length<M||MARKS[0].length!==size){MARKS=[];for(let f=0;f<M;f++) MARKS.push(new Int32Array(size));STAMP=0}}
+function simulate(W,init,beta,mode,T,rng,hist){
+  const M=W.M,N=W.N,P=W.P,size=1<<N;ensureMarks(M,size);
+  const pos=Int32Array.from(init),np=new Int32Array(M),stuck=new Uint8Array(M),nImit=new Int32Array(M),b1=new Float64Array(M),b2=new Float64Array(M);
+  const perfAt=new Float64Array(HZ.length);let hi=0,visited=0;
+  const dims=mode===0?W.sharedIdx:Int32Array.from({length:N},(_,i)=>i),scratch=new Int32Array(N);
+  const stamp=++STAMP;
+  for(let f=0;f<M;f++){MARKS[f][pos[f]]=stamp;visited++}
+  if(hist){for(let f=0;f<M;f++){hist.pos[f]=pos[f];hist.perf[f]=P[f][pos[f]];hist.act[f]=255}}
+  for(let t=1;t<=T;t++){
+    let best=0,bp=P[0][pos[0]];for(let f=1;f<M;f++){const v=P[f][pos[f]];if(v>bp){bp=v;best=f}}
+    for(let f=0;f<M;f++){
+      const cur=pos[f],Pf=P[f];let act=0,mask=0,diff=0;
+      if(stuck[f]){
+        stuck[f]=0;let x=cur;const nd=dims.length,k=Math.min(beta,nd);
+        for(let j=0;j<nd;j++) scratch[j]=dims[j];
+        for(let j=0;j<k;j++){const q=j+Math.floor(rng()*(nd-j));const tmp=scratch[j];scratch[j]=scratch[q];scratch[q]=tmp}
+        if(mode===2){for(let j=0;j<k;j++){const bit=1<<scratch[j];x^=bit;mask|=bit}act=3}
+        else{const src=pos[best];diff=src^cur;for(let j=0;j<k;j++){const bit=1<<scratch[j];if((src^x)&bit){x^=bit;mask|=bit}}act=2}
+        nImit[f]++;if(nImit[f]===1) b1[f]=Pf[cur];else if(nImit[f]===2) b2[f]=Pf[cur];
+        np[f]=x;
+      } else {
+        let bx=cur,bv=Pf[cur];for(let b=0;b<N;b++){const y=cur^(1<<b);if(Pf[y]>bv){bv=Pf[y];bx=y}}
+        if(bx===cur){stuck[f]=1;act=1}else act=0;np[f]=bx;
+      }
+      if(hist){const o=t*M+f;hist.act[o]=act;hist.mask[o]=mask;hist.tmpl[o]=best;hist.diff[o]=diff}
+    }
+    for(let f=0;f<M;f++){pos[f]=np[f];const mk=MARKS[f];if(mk[pos[f]]!==stamp){mk[pos[f]]=stamp;visited++}}
+    if(hist) for(let f=0;f<M;f++){hist.pos[t*M+f]=pos[f];hist.perf[t*M+f]=P[f][pos[f]]}
+    if(hi<HZ.length&&t===HZ[hi]){let s=0;for(let f=0;f<M;f++) s+=P[f][pos[f]];perfAt[hi]=s/M;hi++}
+  }
+  let dec=0,den=0;for(let f=0;f<M;f++) if(nImit[f]>=2){den++;if(b2[f]<b1[f]-1e-9) dec++}
+  return {perfAt,visited:visited/M,dec,den};
+}
+function randInit(seed,M,N){const r=mulberry32(seed^0x2545F491),a=new Int32Array(M);for(let f=0;f<M;f++) a[f]=Math.floor(r()*(1<<N));return a}
+
+/* ---------- Experiments ---------- */
+const PRESETS=[
+  {id:"simple",label:"Similar firms, few interactions",fig:"Fig. 1",K:2,S:12,mode:"disc",
+   note:"<b>What to look for.</b> In the paper, breadth barely matters at T = 4 because about half the firms have only searched locally by then. At T = 10 the line slopes up: copying more pays, with little extra gain beyond β ≈ 8. The long-run lines climb steeply from β = 0 to 1 or 2 and then go flat. Copying even a couple of practices, again and again, is enough to knock a firm off its local peak."},
+  {id:"complex",label:"Similar firms, many interactions",fig:"Fig. 2–4",K:10,S:12,mode:"disc",
+   note:"<b>What to look for.</b> The short-run line (T = 4) is U-shaped: copying a moderate number of practices is worse than copying none or nearly all, because imported practices clash with the ones left behind. The long-run lines flip that shape. Intermediate breadth (around β = 3 in the paper) wins, and the visited-configurations bars show why: it produces the most exploration. Copying everything locks firms onto the leader’s peak too early."},
+  {id:"diffdisc",label:"Different contexts, copy what’s shared",fig:"Fig. 7",K:10,S:4,mode:"disc",
+   note:"<b>What to look for.</b> Firms now share only 4 of 12 payoff functions, and they copy only from those 4. In the paper the best result at almost every horizon is β = 0: skip imitation and rely on local search. Even with long horizons, copying the same few shared practices from the same leader adds no new variety. Switch K to 2 to compare the low-complexity panel."},
+  {id:"diffnon",label:"Different contexts, copy anything",fig:"Fig. 8–9",K:10,S:4,mode:"nondisc",
+   note:"<b>What to look for.</b> Same contexts, but now firms can’t tell which practices transfer and copy from all 12. Over short horizons, no imitation still does best. Over long horizons, small to intermediate breadth beats pure local search: the imported practices may not be valuable in themselves, but they dislodge the firm and restart search. The exploration bars peak around β = 3, as in the paper’s Figure 9."},
+  {id:"jump",label:"Random long jumps",fig:"Fig. 5",K:10,S:12,mode:"jump",
+   note:"<b>What to look for.</b> Instead of copying, a stuck firm changes R randomly chosen practices (the x-axis now reads R). The paper finds this generally does not help in the short or the long run; the only exception is R = 1 in the long run. This lab reproduces the general finding but not that exception: here R = 1 falls below local search, because a firm caught in the period right after a jump is counted at its lowered performance. Compare with the second experiment: there the jumps had a destination, the leader’s configuration."},
+  {id:"custom",label:"Your own design",fig:"",K:5,S:8,mode:"nondisc",
+   note:"<b>Build your own case.</b> Set K, S and the search rule. A useful classroom routine: before running, have students sketch the T = 4 and T = 100 lines on paper, then compare."}
+];
+
+/* ---------- State ---------- */
+const state={preset:"simple",N:12,K:2,S:12,M:5,mode:"disc",runs:250,seed:661,sweep:null,show:[true,true,true,true],
+  sel:3,wT:40,wSeed:20101,watch:null,t:0,playing:null};
+const bmax=()=>state.mode==="disc"?state.S:state.N;
+const xName=()=>state.mode==="jump"?"R":"β";
+
+/* ---------- Sweep (async, cancellable) ---------- */
+let JOB=0;
+async function runSweep(){
+  const job=++JOB,{N,K,S,M,runs,seed}=state,mode=MODES[state.mode],B=bmax();
+  const perf=[...Array(B+1)].map(()=>new Float64Array(HZ.length)),vis=new Float64Array(B+1),dec=new Float64Array(B+1),den=new Float64Array(B+1);
+  const bar=$("#prog").firstElementChild;$("#prog").style.visibility="visible";bar.style.width="0%";
+  $("#status").textContent="computing…";
+  for(let r=0;r<runs;r++){
+    const sd=(seed*1000003+r*104729)>>>0,W=makeWorld(N,K,S,M,sd),init=randInit(sd,M,N);
+    for(let b=0;b<=B;b++){
+      const res=simulate(W,init,b,mode,1000,mulberry32(sd^(b*7919+13)),null);
+      for(let h=0;h<HZ.length;h++) perf[b][h]+=res.perfAt[h];
+      vis[b]+=res.visited;dec[b]+=res.dec;den[b]+=res.den;
+    }
+    if(r%8===7){bar.style.width=((r+1)/runs*100)+"%";await new Promise(z=>setTimeout(z,0));if(job!==JOB) return}
+  }
+  for(let b=0;b<=B;b++){for(let h=0;h<HZ.length;h++) perf[b][h]/=runs;vis[b]/=runs}
+  state.sweep={B,perf,vis,dec:Array.from(dec,(d,b)=>den[b]?d/den[b]*100:0),runs,mode:state.mode};
+  bar.style.width="100%";setTimeout(()=>{if(job===JOB) $("#prog").style.visibility="hidden"},250);
+  $("#status").textContent=`mean of ${runs.toLocaleString()} runs`;
+  drawSweep();renderTable();drawBars();
+}
+
+/* ---------- Watch one run ---------- */
+function computeWatch(){
+  const {N,K,S,M,wT,wSeed}=state,W=makeWorld(N,K,S,M,wSeed),init=randInit(wSeed,M,N);
+  const n=(wT+1)*M,hist={pos:new Int32Array(n),perf:new Float32Array(n),act:new Uint8Array(n),mask:new Int32Array(n),tmpl:new Int8Array(n),diff:new Int32Array(n)};
+  simulate(W,init,Math.min(state.sel,bmax()),MODES[state.mode],wT,mulberry32(wSeed*31+state.sel),hist);
+  state.watch={W,hist,T:wT};state.t=Math.min(state.t,wT);
+}
+
+/* ---------- Theme ---------- */
+let TH={};
+function readTheme(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  TH={ink:g("--ink"),muted:g("--muted"),line:g("--line"),surface:g("--surface"),accent:g("--accent"),bar:g("--bar"),soft:g("--soft"),
+    hz:["--h1","--h2","--h3","--h4"].map(g),firm:["--f1","--f2","--f3","--f4","--f5","--f6","--f7","--f8"].map(g)}}
+
+/* ---------- Drawing helpers ---------- */
+function setup(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+  const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.font="11px 'IBM Plex Mono', ui-monospace, monospace";return{ctx,w,h}}
+function nice(range,target){const raw=range/target,p=10**Math.floor(Math.log10(raw)),n=raw/p;return(n<1.5?1:n<3?2:n<7?5:10)*p}
+function yAxis(ctx,pad,w,ph,lo,hi,fmt){const Y=v=>pad.t+ph-(v-lo)/(hi-lo)*ph,st=nice(hi-lo,5);
+  ctx.textAlign="right";ctx.textBaseline="middle";ctx.lineWidth=1;
+  for(let v=Math.ceil(lo/st-1e-9)*st;v<=hi+1e-9;v+=st){ctx.strokeStyle=TH.line;ctx.beginPath();ctx.moveTo(pad.l,Math.round(Y(v))+.5);ctx.lineTo(w-pad.r,Math.round(Y(v))+.5);ctx.stroke();ctx.fillStyle=TH.muted;ctx.fillText(fmt(v),pad.l-6,Y(v))}
+  return Y}
+function marker(ctx,k,x,y){ctx.beginPath();
+  if(k===0){ctx.moveTo(x,y-4.5);ctx.lineTo(x+4.5,y);ctx.lineTo(x,y+4.5);ctx.lineTo(x-4.5,y);ctx.closePath()}
+  else if(k===1){ctx.rect(x-3.5,y-3.5,7,7)}
+  else if(k===2){ctx.arc(x,y,3.8,0,7)}
+  else {ctx.moveTo(x,y-4.5);ctx.lineTo(x+4.5,y+3.5);ctx.lineTo(x-4.5,y+3.5);ctx.closePath()}
+  ctx.fill();ctx.stroke()}
+const SPAD={l:44,r:14,t:12,b:30};
+function bandX(n,w,pad){const pw=w-pad.l-pad.r,step=pw/Math.max(1,n);return{X:i=>pad.l+step*(i+.5),step,pw}}
+
+function drawSweep(){
+  const cv=$("#cSweep"),{ctx,w,h}=setup(cv),sw=state.sweep;if(!sw) return;
+  const B=sw.B,pad=SPAD,ph=h-pad.t-pad.b;
+  let lo=1,hi=0;for(let b=0;b<=B;b++) for(let k=0;k<4;k++) if(state.show[k]){const v=sw.perf[b][k];if(v<lo)lo=v;if(v>hi)hi=v}
+  if(lo>hi){lo=0;hi=1}const span=Math.max(.02,hi-lo);lo=Math.max(0,lo-span*.12);hi=Math.min(1,hi+span*.12);
+  const Y=yAxis(ctx,pad,w,ph,lo,hi,v=>v.toFixed(nice(hi-lo,5)<.01?3:2)),{X,step}=bandX(B+1,w,pad);
+  const sel=Math.min(state.sel,B);ctx.fillStyle=TH.soft;ctx.fillRect(X(sel)-step/2,pad.t,step,ph);
+  ctx.textAlign="center";ctx.textBaseline="top";ctx.fillStyle=TH.muted;
+  for(let b=0;b<=B;b++) ctx.fillText(String(b),X(b),pad.t+ph+6);
+  ctx.fillText(xName(),pad.l-26,pad.t+ph+6);
+  for(let k=0;k<4;k++){if(!state.show[k]) continue;const c=TH.hz[k];
+    ctx.strokeStyle=c;ctx.lineWidth=2;ctx.setLineDash(k===3?[2,3]:k===2?[6,3]:[]);ctx.beginPath();
+    for(let b=0;b<=B;b++){const x=X(b),y=Y(sw.perf[b][k]);b?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=c;ctx.strokeStyle=TH.surface;ctx.lineWidth=1.5;for(let b=0;b<=B;b++) marker(ctx,k,X(b),Y(sw.perf[b][k]));
+  }
+}
+function drawBarChart(cv,vals,fmt,fixedMax){
+  const {ctx,w,h}=setup(cv),B=vals.length-1,pad={l:38,r:10,t:8,b:24},ph=h-pad.t-pad.b;
+  let mx=fixedMax||0;for(const v of vals) if(v>mx) mx=v;mx=mx||1;const top=Math.ceil(mx/nice(mx,4))*nice(mx,4);
+  const Y=yAxis(ctx,pad,w,ph,0,top,fmt),{X,step}=bandX(B+1,w,pad),sel=Math.min(state.sel,B);
+  ctx.textAlign="center";ctx.textBaseline="top";
+  for(let b=0;b<=B;b++){const bw=Math.max(2,step*.68),y=Y(vals[b]);
+    ctx.fillStyle=b===sel?TH.accent:TH.bar;ctx.fillRect(X(b)-bw/2,y,bw,pad.t+ph-y);
+    ctx.fillStyle=TH.muted;ctx.fillText(String(b),X(b),pad.t+ph+5)}
+}
+function drawBars(){const sw=state.sweep;if(!sw) return;
+  drawBarChart($("#cVis"),Array.from(sw.vis),v=>String(Math.round(v)));
+  drawBarChart($("#cDec"),sw.dec,v=>Math.round(v)+"%");}
+
+function renderLegend(){
+  $("#hzLegend").innerHTML=HZ.map((t,k)=>`<label><input type="checkbox" id="hz${k}" data-k="${k}" ${state.show[k]?"checked":""}><svg width="26" height="12" aria-hidden="true"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--h${k+1})" stroke-width="2" ${k===3?'stroke-dasharray="2 3"':k===2?'stroke-dasharray="6 3"':""}/></svg>T = ${t.toLocaleString()}${t<=10?" (short run)":" (long run)"}</label>`).join("");
+}
+function renderTable(){
+  const sw=state.sweep;if(!sw) return;const B=sw.B,sel=Math.min(state.sel,B);
+  let h=`<thead><tr><th class="rowh">${xName()} →</th>${[...Array(B+1).keys()].map(b=>`<th data-b="${b}" class="${b===sel?"sel":""}" style="cursor:pointer">${b}</th>`).join("")}</tr></thead><tbody>`;
+  HZ.forEach((t,k)=>{let bi=0;for(let b=1;b<=B;b++) if(sw.perf[b][k]>sw.perf[bi][k]) bi=b;
+    h+=`<tr><th class="rowh"><span class="sw" style="background:var(--h${k+1});margin-right:6px"></span>T = ${t.toLocaleString()}</th>${[...Array(B+1).keys()].map(b=>`<td data-b="${b}" class="${b===bi?"best ":""}${b===sel?"sel":""}" style="cursor:pointer">${sw.perf[b][k].toFixed(3)}</td>`).join("")}</tr>`});
+  $("#tbl").innerHTML=h+"</tbody>";
+}
+
+/* ---------- Watch rendering ---------- */
+const WPAD={l:36,r:10,t:8,b:22};
+function drawWatch(){
+  const wv=state.watch;if(!wv) return;const cv=$("#cWatch"),{ctx,w,h}=setup(cv),M=state.M,T=wv.T,ph=h-WPAD.t-WPAD.b,pw=w-WPAD.l-WPAD.r;
+  let lo=1;for(let i=0;i<wv.hist.perf.length;i++) if(wv.hist.perf[i]<lo) lo=wv.hist.perf[i];lo=Math.max(0,Math.floor(lo*10)/10-.05);
+  const Y=yAxis(ctx,WPAD,w,ph,lo,1,v=>v.toFixed(1)),X=t=>WPAD.l+t/T*pw;
+  ctx.textAlign="center";ctx.textBaseline="top";ctx.fillStyle=TH.muted;const st=nice(T,w<420?4:8);
+  for(let t=0;t<=T;t+=st) ctx.fillText(String(t),X(t),WPAD.t+ph+5);
+  for(let f=0;f<M;f++){ctx.strokeStyle=TH.firm[f];ctx.lineWidth=1.8;ctx.beginPath();
+    for(let t=0;t<=T;t++){const x=X(t),y=Y(wv.hist.perf[t*M+f]);t?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke();
+    for(let t=1;t<=T;t++){const a=wv.hist.act[t*M+f];if(a>=2){ctx.fillStyle=TH.firm[f];ctx.beginPath();ctx.arc(X(t),Y(wv.hist.perf[t*M+f]),2.6,0,7);ctx.fill()}}}
+  const cx=Math.round(X(state.t))+.5;ctx.strokeStyle=TH.ink;ctx.globalAlpha=.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(cx,WPAD.t);ctx.lineTo(cx,WPAD.t+ph);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+}
+function popcount(x){let c=0;while(x){x&=x-1;c++}return c}
+function renderFirms(){
+  const wv=state.watch;if(!wv) return;const M=state.M,N=state.N,t=state.t,H=wv.hist,sh=wv.W.shared,showSh=state.S<N;
+  let best=0;for(let f=1;f<M;f++) if(H.perf[t*M+f]>H.perf[t*M+best]) best=f;
+  $("#firms").innerHTML=[...Array(M).keys()].map(f=>{
+    const o=t*M+f,x=H.pos[o],a=t?H.act[o]:255,mask=t?H.mask[o]:0,p=H.perf[o];
+    let bits="";for(let b=N-1;b>=0;b--) bits+=`<span class="bit${(x>>b)&1?" on":""}${(mask>>b)&1?" cp":""}${showSh&&sh[b]?" sh":""}"></span>`;
+    let txt;
+    if(t===0) txt="random start";
+    else if(a===0) txt="local search: changed 1 practice";
+    else if(a===1) txt="stuck: no single change helps";
+    else if(a===2){const tf=H.tmpl[o];txt=tf===f?"is the leader; copying itself changes nothing":`copied from <b>F${tf+1}</b>: ${popcount(mask)} of ${Math.min(state.sel,bmax())} picks changed (${popcount(H.diff[o])} practices differed)`}
+    else txt=`jumped: changed ${popcount(mask)} practices at random`;
+    return `<div class="firm"><div class="nm"><span class="sw" style="background:var(--f${f+1})"></span>F${f+1}${f===best?" ★":""}</div><div class="bits" aria-label="Practices of firm ${f+1}">${bits}</div>
+      <div style="min-width:0"><div class="act">${p.toFixed(3)} · ${txt}</div><div class="pbar"><div style="width:${(p*100).toFixed(1)}%"></div></div></div></div>`}).join("");
+  $("#tLabel").textContent="Period "+t;$("#scrub").value=t;
+}
+function watchFrame(){drawWatch();renderFirms()}
+
+/* ---------- Controls ---------- */
+function renderPresets(){
+  $("#presets").innerHTML=PRESETS.map(p=>`<button class="chip" data-p="${p.id}" aria-pressed="${p.id===state.preset}">${p.label}${p.fig?`<small>${p.fig}</small>`:""}</button>`).join("");
+  const p=PRESETS.find(p=>p.id===state.preset);$("#note").innerHTML=`<p>${p.note}</p>`;
+}
+function renderControls(){
+  $("#inK").value=state.K;$("#kVal").textContent="= "+state.K;
+  $("#kHint").textContent=state.K===0?"Practices are independent: a single smooth peak.":state.K<=3?"Few interactions: a fairly smooth landscape.":state.K>=8?"Dense interactions: a very rugged landscape with many local peaks.":"Moderate interactions.";
+  $("#inS").value=state.S;$("#sVal").textContent="= "+state.S+" of "+state.N;
+  $("#sHint").textContent=state.S===state.N?"Identical contexts: the same practices pay off the same way for every firm.":state.S===0?"Unrelated contexts: no payoff function is shared.":`${state.S} payoff functions are shared; ${state.N-state.S} are specific to each firm.`;
+  $("#inM").value=state.M;$("#inR").value=state.runs;
+  document.querySelectorAll("#mode button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===state.mode));
+  $("#modeHint").textContent=state.mode==="disc"?`Discriminant imitation: copies β of the leader’s practices, chosen only among the ${state.S} shared ones, so β runs from 0 to ${state.S}.`
+    :state.mode==="nondisc"?"Nondiscriminant imitation: copies β of the leader’s practices chosen among all 12, without knowing which ones transfer."
+    :"No imitation: the stuck firm changes R randomly chosen practices, then resumes local search.";
+  $("#wBeta").max=bmax();if(state.sel>bmax()) state.sel=bmax();$("#wBeta").value=state.sel;
+  $("#wBetaVal").textContent="= "+state.sel;document.querySelector('label[for="wBeta"]').firstChild.textContent=(state.mode==="jump"?"R":"β")+" for this run ";
+  $("#wT").value=state.wT;$("#scrub").max=state.wT;
+}
+let deb;
+function changed(fullSweep){stop();renderControls();computeWatch();watchFrame();
+  if(fullSweep){state.sweep=null;clearTimeout(deb);deb=setTimeout(runSweep,150)}}
+function selectB(b){b=Math.max(0,Math.min(bmax(),b));if(b===state.sel) return;state.sel=b;$("#wBeta").value=b;$("#wBetaVal").textContent="= "+b;
+  drawSweep();renderTable();drawBars();computeWatch();watchFrame()}
+function stop(){if(state.playing){clearInterval(state.playing);state.playing=null}$("#play").textContent="Play"}
+function play(){if(state.playing){stop();return}if(state.t>=state.watch.T) state.t=0;$("#play").textContent="Pause";
+  state.playing=setInterval(()=>{if(state.t>=state.watch.T){stop();return}state.t++;watchFrame()},state.wT>60?120:380)}
+
+$("#presets").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b) return;const p=PRESETS.find(q=>q.id===b.dataset.p);
+  Object.assign(state,{preset:p.id,K:p.K,S:p.S,mode:p.mode,t:0});state.sel=p.id==="complex"||p.id==="diffnon"?3:Math.min(3,bmax());renderPresets();changed(true)});
+const toCustom=()=>{if(state.preset!=="custom"){state.preset="custom";renderPresets()}};
+$("#inK").addEventListener("input",e=>{state.K=+e.target.value;toCustom();changed(true)});
+$("#inS").addEventListener("input",e=>{state.S=+e.target.value;toCustom();changed(true)});
+$("#inM").addEventListener("change",e=>{state.M=+e.target.value;changed(true)});
+$("#inR").addEventListener("change",e=>{state.runs=+e.target.value;changed(true)});
+$("#mode").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b) return;state.mode=b.dataset.m;toCustom();changed(true)});
+$("#rerun").addEventListener("click",()=>{state.seed=Math.floor(Math.random()*1e6)+1;changed(true)});
+$("#hzLegend").addEventListener("change",e=>{const k=+e.target.dataset.k;state.show[k]=e.target.checked;drawSweep()});
+$("#tbl").addEventListener("click",e=>{const c=e.target.closest("[data-b]");if(c) selectB(+c.dataset.b)});
+const pickFrom=(cv,pad,e)=>{const r=cv.getBoundingClientRect(),B=state.sweep?state.sweep.B:bmax(),step=(r.width-pad.l-pad.r)/(B+1);return Math.floor((e.clientX-r.left-pad.l)/step)};
+$("#cSweep").addEventListener("click",e=>selectB(pickFrom($("#cSweep"),SPAD,e)));
+["#cVis","#cDec"].forEach(id=>$(id).addEventListener("click",e=>selectB(pickFrom($(id),{l:38,r:10},e))));
+$("#wBeta").addEventListener("input",e=>selectB(+e.target.value));
+$("#wT").addEventListener("change",e=>{state.wT=+e.target.value;changed(false)});
+$("#wNew").addEventListener("click",()=>{state.wSeed=Math.floor(Math.random()*1e6)+1;state.t=0;changed(false)});
+$("#play").addEventListener("click",play);
+$("#scrub").addEventListener("input",e=>{stop();state.t=+e.target.value;watchFrame()});
+const wcv=$("#cWatch"),setT=e=>{const r=wcv.getBoundingClientRect();state.t=Math.max(0,Math.min(state.watch.T,Math.round((e.clientX-r.left-WPAD.l)/(r.width-WPAD.l-WPAD.r)*state.watch.T)));stop();watchFrame()};
+wcv.addEventListener("pointerdown",e=>{wcv.setPointerCapture(e.pointerId);setT(e)});
+wcv.addEventListener("pointermove",e=>{if(e.buttons) setT(e)});
+let rz;new ResizeObserver(()=>{clearTimeout(rz);rz=setTimeout(()=>{drawSweep();drawBars();drawWatch()},60)}).observe(document.querySelector(".results"));
+const reTheme=()=>{readTheme();drawSweep();drawBars();drawWatch()};
+try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",reTheme)}catch(e){}
+new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+/* ---------- Boot ---------- */
+readTheme();renderPresets();renderLegend();renderControls();computeWatch();state.t=state.wT;watchFrame();runSweep();
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{drawSweep();drawBars();drawWatch()});
+})();
+</script>
+
+</body></html>
